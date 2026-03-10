@@ -1,0 +1,152 @@
+let
+    Fonte = Excel.CurrentWorkbook(){[Name="Tabela1"]}[Content],
+
+    #"Tipo Alterado 1" =
+        Table.TransformColumnTypes(
+            Fonte,
+            {
+                {"PAINEL", type text}, {"TAG", type text},
+                {"QUANTIDADE NO PROJETO", type text},
+                {"COMPRIMENTO NO PROJETO", type text},
+                {"COMPRIMENTO DE FORNECIMENTO", type text},
+                {"COMPRIMENTO PRÉ-CONFECCIONADO", type text},
+                {"DESCRIÇÃO", type text}, {"CÓDIGO", type text},
+                {"FABRICANTE", type text}, {"GRUPO", type text},
+                {"SUBGRUPO", type text}, {"DESCONTINUADO?", type text},
+                {"RECEBIDO", type any}, {"OBSERVAÇÃO", type any},
+                {"QUANTIDADE DE CONEXÕES", type text}
+            }
+        ),
+
+    #"Valor Substituído 1" =
+        Table.ReplaceValue(
+            #"Tipo Alterado 1",
+            " mm",
+            "",
+            Replacer.ReplaceText,
+            {"COMPRIMENTO NO PROJETO", "COMPRIMENTO DE FORNECIMENTO"}
+        ),
+
+    #"Valor Substituído 2" =
+        Table.ReplaceValue(
+            #"Valor Substituído 1",
+            ".",
+            ",",
+            Replacer.ReplaceText,
+            {
+                "COMPRIMENTO NO PROJETO",
+                "COMPRIMENTO DE FORNECIMENTO",
+                "COMPRIMENTO PRÉ-CONFECCIONADO"
+            }
+        ),
+
+    #"Valor Substituído 3" =
+        Table.ReplaceValue(
+            #"Valor Substituído 2",
+            " m",
+            "",
+            Replacer.ReplaceText,
+            {"COMPRIMENTO NO PROJETO"}
+        ),
+
+    #"Texto Extraído Antes do Delimitador" =
+        Table.TransformColumns(
+            #"Valor Substituído 3",
+            {{"QUANTIDADE DE CONEXÕES", each Text.BeforeDelimiter(_, "x"), type text}}
+        ),
+
+    #"Tipo Alterado 2" =
+        Table.TransformColumnTypes(
+            #"Texto Extraído Antes do Delimitador",
+            {
+                {"QUANTIDADE NO PROJETO", Int64.Type},
+                {"COMPRIMENTO DE FORNECIMENTO", Int64.Type},
+                {"COMPRIMENTO PRÉ-CONFECCIONADO", Int64.Type},
+                {"COMPRIMENTO NO PROJETO", type number},
+                {"QUANTIDADE DE CONEXÕES", Int64.Type}
+            }
+        ),
+
+    #"Coluna dividida 1" =
+        Table.TransformColumns(
+            #"Tipo Alterado 2",
+            {{"COMPRIMENTO DE FORNECIMENTO", each _ / 1000, type number}}
+        ),
+
+    #"Coluna dividida 2" =
+        Table.TransformColumns(
+            #"Coluna dividida 1",
+            {{"COMPRIMENTO NO PROJETO", each _ / 1000, type number}}
+        ),
+
+    #"Personalização Adicionada 1" =
+        Table.AddColumn(
+            #"Coluna dividida 2", "QUANTIDADE PARA COMPRA", each try
+                    if [COMPRIMENTO DE FORNECIMENTO] > 0 then
+                        Number.Abs([COMPRIMENTO NO PROJETO] / [COMPRIMENTO DE FORNECIMENTO])
+                    else if [GRUPO] = "Cabo" then
+                        [QUANTIDADE NO PROJETO] * [QUANTIDADE DE CONEXÕES]
+                    else
+                        [QUANTIDADE NO PROJETO]
+                otherwise
+                    null
+        ),
+
+    #"Personalização Adicionada 2" =
+        Table.AddColumn(
+            #"Personalização Adicionada 1", "PORCENTAGEM DA PEÇA", each try
+                    let
+                        perc = [QUANTIDADE PARA COMPRA] * 100,
+                        arred = Number.RoundUp(perc / 10) * 10
+                    in
+                        if arred > 100 then 100 else arred
+                otherwise
+                    null
+        ),
+
+    Agrupado =
+        Table.Group(
+            #"Personalização Adicionada 2",
+            {"CÓDIGO", "FABRICANTE"},
+            {
+                {"PAINEL", each List.First([PAINEL]), type text},
+                {"TAG", each Text.Combine(List.Distinct([TAG]), ", "), type text},
+                {"QUANTIDADE PARA COMPRA", each List.Sum([QUANTIDADE PARA COMPRA]), type number},
+                {"DESCRIÇÃO", each List.First([DESCRIÇÃO]), type text},
+                {"DESCONTINUADO?", each List.First([#"DESCONTINUADO?"]), type text},
+                {"RECEBIDO", each List.First([RECEBIDO]), type any},
+                {"OBSERVAÇÃO", each List.First([OBSERVAÇÃO]), type any}
+            }
+        ),
+
+    #"Colunas Reordenadas" =
+        Table.ReorderColumns(
+            Agrupado,
+            {
+                "PAINEL",
+                "TAG",
+                "QUANTIDADE PARA COMPRA",
+                "DESCRIÇÃO",
+                "CÓDIGO",
+                "FABRICANTE",
+                "DESCONTINUADO?",
+                "RECEBIDO",
+                "OBSERVAÇÃO"
+            }
+        ),
+
+    #"Arredondado para Cima" =
+        Table.TransformColumns(
+            #"Colunas Reordenadas",
+            {{"QUANTIDADE PARA COMPRA", Number.RoundUp, Int64.Type}}
+        ),
+
+    #"Linhas em Branco Removidas" =
+        Table.SelectRows(
+            #"Arredondado para Cima",
+            each not List.IsEmpty(
+                List.RemoveMatchingItems(Record.FieldValues(_), {"", null})
+            )
+        )
+in
+    #"Linhas em Branco Removidas"

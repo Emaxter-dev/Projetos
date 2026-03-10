@@ -1,0 +1,90 @@
+<html>
+<head>
+    <meta charset="UTF-8"> <!-- Permite caractéres de acentuação, anulando qualquer erro de exibição dos mesmos -->
+    <style>
+        div {
+            padding: 10px;
+            background-color: #34A853;
+            overflow: hidden;
+            border-radius: 4px;
+            }
+        input[type=text], textarea, select {
+            font: 17px Calibri;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            }
+        input[type=button] {
+            font: 17px Calibri;
+            width: 100%;
+            float: right;
+            cursor: pointer;
+            padding: 7px;
+            border: 1px solid #ccc;
+            border-radius: 4px
+            }
+        input[type=email] {
+            font: 17px Calibri;
+            width: 100%;
+            float: right;
+            cursor: pointer;
+            padding: 7px;
+            border: 1px solid #ccc;
+            border-radius: 4px
+            }
+        input[type=date] {
+            font: 17px Calibri;
+            width: 100%;
+            float: right;
+            cursor: pointer;
+            padding: 7px;
+            border: 1px solid #ccc;
+            border-radius: 4px
+            }
+    </style>
+</head>
+<body>
+    <div>
+        <div>
+            <input type="text" placeholder="Nome do Cliente" id="txtNome"> <!-- Campo para Nome do Cliente -->
+        </div>
+        <div>
+            <input type="date" placeholder="Data de Nascimento" id="txtDataDeNascimento"> <!-- Campo para Data de Nascimento -->
+        </div>
+        <div>
+            <input type="email" placeholder="Email" id="txtEmail"> <!-- Campo para Email -->
+        </div>
+        <div>
+            <select name="" id="SelPaís"> <!-- Seletor -->
+                <option selected value="">Escolha seu País</option>
+                <option value="índia">Índia</option>
+                <option value="Japão">Japão</option>
+                <option value="Brasil">Brasil</option>
+            </select>
+        </div>
+        <div>
+            <input type="button" value="Salvar" onclick="saveInfo()" id="butSave"> <!-- Botão para Salvar as Informações -->
+        </div>
+    </div>
+
+    <script>
+        function saveInfo()
+        {
+        //Variáveis
+        var name = document.getElementById('txtNome').value;
+        var data_de_nascimento = document.getElementById('txtDataDeNascimento').value;
+        var email = document.getElementById('txtEmail').value;
+        var país = document.getElementById('SelPaís').value;
+    
+        var data =
+            'As informações abaixo estão corretas? \r Name:' + name + '\r\n' +
+            'Data de Nascimento:' + data_de_nascimento + '\r\n' +
+            'Email:' + email + '\r\n' +
+            'País:' + país + '\r\n';
+        confirm(data);
+        }
+    </script>
+
+</body>
+</html>
